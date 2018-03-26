@@ -5,6 +5,7 @@
 #include <QSerialPort>
 #include <QAudioDeviceInfo>
 #include <QAudioOutput>
+#include <QAudioInput>
 #include <QDebug>
 #include <QFile>
 /**
@@ -25,10 +26,12 @@ private:
     QSerialPort *m_cmdInterface;
     QSerialPort *m_audioInterface;
     QAudioOutput *m_loudSpeaker;
+    QAudioInput *m_microPhone;
 protected slots:
     void OnCmdDataAvailabeForRead();
     void OnAudioDataAvailabeForRead();
     void handleLoudSpeakerStateChanged(QAudio::State);
+    void handleMicroPhoneStateChanged(QAudio::State);
 };
 
 #endif // DONGLEDRIVER_H

@@ -35,19 +35,30 @@ DongleDriver::DongleDriver(QString cmdPath, QString audioPath):m_cmdInterface(ne
     format.setCodec("audio/pcm");
     format.setByteOrder(QAudioFormat::LittleEndian);
     format.setSampleType(QAudioFormat::UnSignedInt);
-    QAudioDeviceInfo info(QAudioDeviceInfo::defaultOutputDevice());
-    if (!info.isFormatSupported(format)) {
-        qWarning() << "Raw audio format not supported by backend, cannot play audio.";
+    QAudioDeviceInfo defaultSpeaker(QAudioDeviceInfo::defaultOutputDevice());
+    if (!defaultSpeaker.isFormatSupported(format)) {
+        qWarning() << "Raw audio format not supported by Speaker";
+        return;
+    }
+    QAudioDeviceInfo defaultMicrophone(QAudioDeviceInfo::defaultInputDevice());
+    if (!defaultMicrophone.isFormatSupported(format)) {
+        qWarning() << "Raw audio format not supported by Microphone";
         return;
     }
     m_loudSpeaker = new QAudioOutput(format, this);
+    m_microPhone = new QAudioInput(format, this);
     connect(m_loudSpeaker, SIGNAL(stateChanged(QAudio::State)), this, SLOT(handleLoudSpeakerStateChanged(QAudio::State)));
+    connect(m_microPhone, SIGNAL(stateChanged(QAudio::State)), this, SLOT(handleMicroPhoneStateChanged(QAudio::State)));
     m_loudSpeaker->start(m_audioInterface);
+    m_microPhone->start(m_audioInterface);
 }
 
 DongleDriver::~DongleDriver()
 {
-
+    m_microPhone->stop();
+    m_loudSpeaker->stop();
+    m_audioInterface->close();
+    m_cmdInterface->close();
 }
 /**
  * @brief DongleDriver::Initialize
@@ -103,8 +114,6 @@ void DongleDriver::handleLoudSpeakerStateChanged(QAudio::State newState)
             case QAudio::IdleState:
                 // Finished playing (no more data)
             qDebug() << "Playing Stopped NO Data";
-//                    m_audio->stop();
-//                    delete m_audio;
                 break;
 
             case QAudio::StoppedState:
@@ -119,4 +128,30 @@ void DongleDriver::handleLoudSpeakerStateChanged(QAudio::State newState)
                 // ... other cases as appropriate
                 break;
         }
+}
+
+
+void DongleDriver::handleMicroPhoneStateChanged(QAudio::State newState)
+{
+    switch (newState) {
+      case QAudio::StoppedState:
+          if (m_microPhone->error() != QAudio::NoError) {
+              // Error handling
+              qDebug() << "Error In Audio Recording" ;
+          } else {
+              // Finished recording
+              qDebug() << "Recording Finished";
+          }
+          break;
+
+      case QAudio::ActiveState:
+          // Started recording - read from IO device
+//            m_audio->start(m_recordingFile);
+            qDebug() << "Recording Started";
+          break;
+
+      default:
+          // ... other cases as appropriate
+          break;
+    }
 }
